@@ -3,8 +3,9 @@
 	"version": "1.0.0",
 	"description": "",
 	"scripts": {
-		"build": "webpack -w",
-		"serve": "webpack serve --open"
+		"build": "webpack --mode production",
+		"serve": "webpack serve --open",
+		"start": "node server.js"
 	},
 	"author": "swayam shree sharma",
 	"license": "ISC",
