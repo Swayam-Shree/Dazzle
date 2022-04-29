@@ -10,8 +10,6 @@ export function loginInit(){
 			sketch.canvas = sketch.createCanvas(window.innerWidth, window.innerHeight, sketch.P2D);
 			sketch.canvas.position(0, 0);
 			sketch.canvas.style("z-index", "0");
-
-			sketch.serverHost = true;
 	
 			sketch.play_button = new Button(sketch, "Play", 40,
 				() => {

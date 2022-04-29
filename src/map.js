@@ -48,7 +48,7 @@ class P5TexturedMesh {
 		material.ambientColor = new Color3(1, 1, 1);
 		this.mesh.material = material;
 
-		this.bgColor = pCtx.random(20, 100);
+		this.bgColor = pCtx.random(50, 120);
 		this.pGraphic.background(this.bgColor);
 		this.pGraphic.stroke(255);
 		this.pGraphic.strokeWeight(1);

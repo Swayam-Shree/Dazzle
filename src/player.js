@@ -1,6 +1,7 @@
-import { Ray, UniversalCamera, Vector3, MeshBuilder } from "@babylonjs/core";
+import { Ray, UniversalCamera, Vector3, MeshBuilder, StandardMaterial,
+		Color3 } from "@babylonjs/core";
 import { scene, worldCanvas, keybinds, directions } from "./world";
-import { peer } from "./networking";
+import { socket } from "./networking";
 
 export class Player {
 	constructor(scene, id, username) {
@@ -26,11 +27,9 @@ export class Player {
 		this.pickingRay.direction = v.subtract(this.camera.position);
 		this.pPickingInfo = this.pickingInfo;
 		this.pickingInfo = scene.pickWithRay(this.pickingRay);
-		if (peer.loggedIn ){
-			peer.send(JSON.stringify({
-				type: "position",
-				position: this.camera.position.asArray()
-			}));
+
+		if (socket.loggedIn){
+			socket.emit("position", this.camera.position.asArray());
 			this.camera.pPosition = this.camera.position.clone();
 		}
 	}
@@ -68,10 +67,17 @@ export class Enemy {
 	constructor(scene, id, name) {
 		this.id = id;
 		this.name = name;
-		this.mesh = MeshBuilder.CreateSphere(id, {
-			diameterX: 1.5,
-			diameterY: 3,
-			diameterZ: 1.5
+		this.mesh = MeshBuilder.CreateCapsule(id, {
+			height: 4,
+			radius: 1,
 		}, scene);
+		let material = new StandardMaterial(id, scene);
+		material.ambientColor = new Color3(Math.random(), Math.random(), Math.random());
+		this.mesh.material = material;
+		// this.mesh = MeshBuilder.CreateSphere(id, {
+		// 	diameterX: 1.5,
+		// 	diameterY: 3,
+		// 	diameterZ: 1.5
+		// }, scene);
 	}
 }

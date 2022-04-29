@@ -1,7 +1,4 @@
 const express = require("express");
-const Peer = require("simple-peer");
-// const Peer = require("peerjs");
-const wrtc = require("wrtc");
 const { Server } = require("socket.io");
 const { performance } = require("perf_hooks");
 
@@ -31,13 +28,12 @@ let globalRoomMaxClients = 10;
 
 io.on("connection", (socket) => {
 	console.log(`${socket.id} connected`);
-	socket.loggedIn = false;
 	socket.emit("serverConnected", {
 		onlineCount: io.engine.clientsCount,
 		roomData,
 	});
 
-	socket.on("serverHostRequest", (name, room, remoteSdp, signalLocalSdp) => {
+	socket.on("requestLogin", (room, name, acceptLogin) => {
 		if (!room){
 			room = "globalRoom" + globalRoomCount;
 			if (roomData[room] && roomData[room] >= globalRoomMaxClients - 1) {
@@ -45,66 +41,47 @@ io.on("connection", (socket) => {
 			}
 		}
 		name =  name ? name : "Guest" + Math.floor(Math.random() * 100);
+		
+		// alert players in room of new player join
+		for (let s of getSocketsOf(room)){
+			s.emit("enemyJoined", socket.id, name);
+		}
 
 		socket.join(room);
 		updateRoomData();
-		let sockets = getSocketsOf(room);
-		for (let s of sockets){
-			if (s.peer && s.peer.client && s.peer.client.loggedIn){
-				s.emit("enemyJoined", socket.id, name);
-			}
+		
+		socket.player = {
+			roomname: room, 
+			username: name,
+			position: {
+				_dirty: true,
+				value: [0, 0, 0]
+			},
+		};
+
+		acceptLogin(room, name);
+	});
+
+	socket.on("position", (position) => {
+		if (socket.player){
+			socket.player.position._dirty = true;
+			socket.player.position.value = position;
 		}
-
-		let peer = new Peer({ wrtc: wrtc });
-
-		peer.signal(remoteSdp);
-		peer.on("signal", (localSdp) => {
-			signalLocalSdp(localSdp);
-		});
-		peer.on("connect", () => {
-			peer.client = {
-				socket,
-				loggedIn: true,
-				roomname: room, 
-				username: name,
-				position: {
-					_dirty: true,
-					value: [0, 0, 0]
-				},
-			};
-		});
-		peer.on("data", (data) => {
-			data = JSON.parse(data.toString());
-
-			switch(data.type) {
-				case "position":
-					let position = peer.client.position;
-					position._dirty = true;
-					position.value = data.position;
-			}
-		});
-		peer.on("error", (err) => {
-			console.log(err.code);
-			peer.destroy();
-			socket.disconnect();
-		});
-
-		socket.peer = peer;
 	});
 
 	socket.on("requestEnemyInit", (sendEnemyData) => {
-		let enemySockets = getSocketsOf(socket.peer.client.roomname);
+		let enemySockets = getSocketsOf(socket.player.roomname);
 		let enemyData = [];
 		for (let s of enemySockets){
-			enemyData.push([s.id, s.peer.client.username]);
+			enemyData.push([s.id, s.player.username]);
 		}
 		sendEnemyData(enemyData);
 	});
 
 	socket.on("disconnect", () => {
 		console.log(`${socket.id} disconnected`);
-		if (socket.peer) {
-			socket.to(socket.peer.client.roomname).emit("enemyLeft", socket.id);
+		if (socket.player) {
+			socket.to(socket.player.roomname).emit("enemyLeft", socket.id);
 		}
 		updateRoomData();
 	});
@@ -131,8 +108,10 @@ function updateRoomData() {
 function getSocketsOf(room){
 	let ids = roomList[room];
 	let sockets = [];
-	for (let sid of ids) {
-		sockets.push(io.of("/").sockets.get(sid));
+	if (ids){
+		for (let sid of ids) {
+			sockets.push(io.of("/").sockets.get(sid));
+		}
 	}
 	return sockets;
 }
@@ -141,20 +120,18 @@ function updatePositions() {
 		let sockets = getSocketsOf(room);
 		let positions = [];
 		for (let socket of sockets) {
-			if (socket.peer && socket.peer.client && socket.peer.client.position._dirty) {
+			let position = socket.player ? socket.player.position : false;
+			if (position && position._dirty) {
 				positions.push({
 					id: socket.id,
-					value: socket.peer.client.position.value
+					value: position.value
 				});
-				socket.peer.client.position._dirty = false;
+				position._dirty = false;
 			}
 		}
 		for (let socket of sockets) {
-			if (socket.peer && socket.peer.client && socket.peer.client.loggedIn) {
-				socket.peer.send(JSON.stringify({
-					type: "position",
-					value: positions
-				}));
+			if (socket.player) {
+				socket.emit("enemyPositions", positions);
 			}
 		}
 	}

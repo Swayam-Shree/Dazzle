@@ -11,7 +11,7 @@ export function hudInit() {
 			hud.canvas.style("z-index", "1");
 	
 			hud.aspectRatio = hud.width / hud.height;
-	
+			
 			hud.frameRate(60);
 			
 			hud.playerHealthbar = new hud.Bar(player.maxHealth, 20, 50, hud.radians(-4), player.username);
@@ -67,7 +67,7 @@ export function hudInit() {
 
 			hud.fill(255, 0, 69);
 			hud.textAlign(hud.LEFT, hud.BASELINE);
-			hud.textSize(60);
+			hud.textSize(hud.aspectRatio * 25);
 			hud.text(this.s, 0, 0);
 			hud.pop();
 		}
