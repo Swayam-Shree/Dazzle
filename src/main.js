@@ -3,4 +3,4 @@ import { networkInit, login } from "./networking";
 
 loginInit();
 networkInit();
-login();
+// login();
