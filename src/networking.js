@@ -1,6 +1,7 @@
 import Cookies from "js-cookie";
 import { p5Login } from "./login";
 import { worldInit, enemyIdMap } from "./world";
+import { P5TexturedMesh } from "./map";
 
 export let socket;
 export let username = "";
@@ -11,10 +12,7 @@ let roomData = {}; // {room: count}
 export function networkInit() {
 	socket = io();
 
-	socket.on("serverConnected", (data) => {
-		p5Login.online_counter = data.onlineCount - 1; // excluding self
-		roomData = data.roomData;
-
+	socket.on("connect", () => {
 		let room = Cookies.get("room");
 		let name = Cookies.get("name");
 		if (room) {
@@ -27,12 +25,26 @@ export function networkInit() {
 		p5Login.online_counter = data.onlineCount - 1; // excluding self
 		roomData = data.roomData;
 	});
-	socket.on("enemyPositions", (positions) => {
+	socket.on("enemyPositionsAndColors", (positions, colors) => {
 		for (let position of positions){
 			let enemy = enemyIdMap[position.id];
 			if (enemy) {
 				let value = position.value;
 				enemy.mesh.position.set(value[0], value[1], value[2]);
+			}
+		}
+		for (let color of colors){
+			let enemy = enemyIdMap[color.id];
+			if (enemy) {
+				enemy.setColor(color.value.slice(0, 3));
+			}
+		}
+	});
+	socket.on("textureCommandBuffer", (buffer) => {
+		let commands = buffer.split("\n");
+		for (let command of commands){
+			if (command){
+				P5TexturedMesh.execute(command);
 			}
 		}
 	});

@@ -1,6 +1,7 @@
 import p5 from "p5";
 import { engine, player } from "./world";
 import { roomname } from "./networking";
+import { ColorPicker } from "./p5ui";
 
 export let p5Hud;
 export function hudInit() {
@@ -15,21 +16,35 @@ export function hudInit() {
 			hud.frameRate(60);
 			
 			hud.playerHealthbar = new hud.Bar(player.maxHealth, 20, 50, hud.radians(-4), player.username);
+
+			hud.colorPicker = new ColorPicker(hud);
+			hud.colorPicker.show_text = true;
 		};
 		hud.draw = () => {
 			hud.clear();
 	
 			hud.noStroke();
-			hud.fill(255, 0, 0);
+			hud.fill(player.color[0], player.color[1], player.color[2], player.color[3]);
+			hud.stroke(0);
 			hud.circle(hud.width * 0.5, hud.height * 0.5, 5);
 	
 			hud.fill(255);
 			hud.textSize(hud.aspectRatio * 15);
-			hud.text("fps >> " + engine.getFps().toFixed(), hud.width * 0.9, hud.height * 0.05);
+			hud.text("fps >> " + engine.getFps().toFixed(), hud.width * 0.8, hud.height * 0.05);
+			hud.text("room >> " + roomname, hud.width * 0.8, hud.height * 0.1);
 
 			hud.playerHealthbar.purevalue = player.health;
 			hud.playerHealthbar.work();
+
+			hud.colorPicker.work();
 		};
+		hud.windowResized = () => {
+			hud.resizeCanvas(window.innerWidth, window.innerHeight);
+			hud.colorPicker.position(20, 70, -4);
+		}
+		hud.mousePressed = () => {
+			hud.colorPicker.clicked();
+		}
 		hud.Bar = class Bar {
 			constructor(maxvalue, x, y, theta = 0, s = '') {
 				this.x = x ; 

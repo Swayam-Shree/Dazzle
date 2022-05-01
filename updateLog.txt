@@ -1,0 +1,24 @@
+first commit
+
+removed webrtc and remade with sockets
+lighter map
+random enemy colors
+name and room acknowledgement fix
+changed link in readme
+added favicon.ico
+
+new two more buildings on map
+room name on hud
+fixed dynamic online counter
+frame delay while drawing fixed
+increased texture resolution
+texture alignment fixed
+crosshair describes player's color
+painting hooked up to networking
+middle walk way and dazzle text on map
+added color picker and its sliders
+enemy color sync
+way more random colors
+pointer locked only when clicked near screen center
+fixed color picker z index
+normalized enemy colors

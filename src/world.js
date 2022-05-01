@@ -23,8 +23,9 @@ export function worldInit() {
 	engine = new Engine(worldCanvas);
 
 	scene = new Scene(engine);
-	scene.gravity = new Vector3(0, 0, 0);
 	scene.collisionsEnabled = true;
+	scene.skipPointerMovePicking = true
+	scene.gravity = new Vector3(0, 0, 0);
 	scene.ambientColor = new Color3(1, 1, 1);
 
 	keybinds = {
@@ -57,6 +58,8 @@ export function worldInit() {
 		for (let data of enemyData) {
 			if (data[0] === socket.id) continue;
 			let enemy = new Enemy(scene, data[0], data[1]);
+			enemy.mesh.position.fromArray(data[2]);
+			enemy.mesh.material.ambientColor.fromArray(data[3]);
 			_enemies.push(enemy);
 			enemyIdMap[data[0]] = enemy;
 		}
@@ -76,14 +79,15 @@ export function worldInit() {
 
 	worldMap = loadMap(scene);
 
-	gravityAcceleration = new Vector3(0, -0.01, 0);
+	gravityAcceleration = new Vector3(0, -0.04, 0);
 
 	hudInit();
-
-	engine.runRenderLoop(() => {
-		worldMap.forEach(p5TeturedMesh => { p5TeturedMesh.updateTexture(); });
-		player.applyAcceleration(gravityAcceleration);
+	
+	scene.onBeforeRenderObservable.add(() => {
 		player.update();
+		worldMap.forEach(p5TeturedMesh => { p5TeturedMesh.updateTexture(); });
+	});
+	engine.runRenderLoop(() => {
 		scene.render();
 	});
 
@@ -92,7 +96,7 @@ export function worldInit() {
 			case KeyboardEventTypes.KEYDOWN:
 				switch (kbInfo.event.key) {
 					case keybinds.jump:
-						player.applyAcceleration(new Vector3(0, player.jumpforce, 0));
+						player.jump();
 						break
 					case keybinds.sprint:
 						player.camera.speed = player.sprintSpeed;
@@ -111,12 +115,14 @@ export function worldInit() {
 
 	window.addEventListener("resize", () => {
 		engine.resize();
-		p5Hud.resizeCanvas(window.innerWidth, window.innerHeight);
 	});
 	window.addEventListener("mousedown", (event) => {
 		if (event.button === 0) {
 			mouseStatus.left = true;
-			engine.enterPointerlock();
+			if ( event.pageX > window.innerWidth/4 && event.pageX < window.innerWidth * 3/4 &&
+				event.pageY > window.innerHeight/4 && event.pageY < window.innerHeight * 3/4 ) {
+				engine.enterPointerlock();
+			}
 		}
 		if (event.button === 2) {
 			mouseStatus.right = true;
