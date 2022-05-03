@@ -1,7 +1,7 @@
 import p5 from "p5";
 import { engine, player } from "./world";
-import { roomname } from "./networking";
-import { ColorPicker } from "./p5ui";
+import { roomname, roomData } from "./networking";
+import { ColorPicker, Chatbox } from "./p5ui";
 
 export let p5Hud;
 export function hudInit() {
@@ -19,6 +19,8 @@ export function hudInit() {
 
 			hud.colorPicker = new ColorPicker(hud);
 			hud.colorPicker.show_text = true;
+
+			hud.chatbox = new Chatbox(hud, roomname, hud.width - 510, hud.height);
 		};
 		hud.draw = () => {
 			hud.clear();
@@ -37,10 +39,20 @@ export function hudInit() {
 			hud.playerHealthbar.work();
 
 			hud.colorPicker.work();
+
+			hud.chatbox.work(roomData[roomname]);
 		};
 		hud.windowResized = () => {
 			hud.resizeCanvas(window.innerWidth, window.innerHeight);
 			hud.colorPicker.position(20, 70, -4);
+
+			hud.chatbox.position(hud.width - 510, hud.height);
+			hud.chatbox.work_between();
+		}
+		hud.keyPressed = () => {
+			if (hud.keyCode === 13) {
+				hud.chatbox.send(player.name);
+			}
 		}
 		hud.mousePressed = () => {
 			hud.colorPicker.clicked();

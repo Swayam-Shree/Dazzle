@@ -1,5 +1,6 @@
 import p5 from "p5";
-import { Button, translatePoint } from "./p5ui"
+import { Button } from "./p5ui"
+import { translatePoint } from "./util"
 import { login } from "./networking";
 
 export let p5Login;

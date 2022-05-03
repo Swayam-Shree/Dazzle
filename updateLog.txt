@@ -22,3 +22,8 @@ way more random colors
 pointer locked only when clicked near screen center
 fixed color picker z index
 normalized enemy colors
+
+dynamic textures only updated when changed and not per frame
+added chatbox
+css style sheet
+reduced chatbox notification duration

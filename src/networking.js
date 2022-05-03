@@ -2,12 +2,13 @@ import Cookies from "js-cookie";
 import { p5Login } from "./login";
 import { worldInit, enemyIdMap } from "./world";
 import { P5TexturedMesh } from "./map";
+import { p5Hud } from "./hud";
 
 export let socket;
 export let username = "";
 export let roomname = "";
 
-let roomData = {}; // {room: count}
+export let roomData = {}; // {room: count}
 
 export function networkInit() {
 	socket = io();
@@ -47,6 +48,10 @@ export function networkInit() {
 				P5TexturedMesh.execute(command);
 			}
 		}
+	});
+	socket.on("chat", (chat) => {
+		p5Hud.chatbox.addChat(chat);
+		if(!p5Hud.chatbox.on) ++p5Hud.chatbox.unread_counter;
 	});
 	socket.on("disconnect", () => {
 		// disconnect page

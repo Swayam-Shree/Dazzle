@@ -11,21 +11,16 @@ let mapTextureResolutionMultipler = 5;
 
 export function loadMap(scene) {
 	let map = [];
-	for (let j = 0; j < 1; ++j) {
-		SceneLoader.ImportMesh("", "./models/", "map.gltf", scene, (meshes) => {
-			for (let i = 1; i < meshes.length; ++i) {
-				let mesh = meshes[i];
-				mesh.position.scaleInPlace(mapSize);
-				mesh.scaling.scaleInPlace(mapSize);
-				mesh.checkCollisions = true;
+	SceneLoader.ImportMesh("", "./models/", "map.gltf", scene, (meshes) => {
+		for (let i = 1; i < meshes.length; ++i) {
+			let mesh = meshes[i];
+			mesh.position.scaleInPlace(mapSize);
+			mesh.scaling.scaleInPlace(mapSize);
+			mesh.checkCollisions = true;
 
-				mesh.position.x += j * mapSize;
-
-				
-				map.push(new P5TexturedMesh(mesh));
-			}
-		});
-	}
+			map.push(new P5TexturedMesh(mesh));
+		}
+	});
 	return map;
 }
 
@@ -70,6 +65,7 @@ export class P5TexturedMesh {
 
 		this.bgColor = pCtx.random(50, 120);
 		this.pGraphic.background(this.bgColor);
+		this.updateTexture();
 
 		this.mesh.cullingStrategy = AbstractMesh.CULLINGSTRATEGY_STANDARD;
 		this.mesh.freezeWorldMatrix();
@@ -84,7 +80,8 @@ export class P5TexturedMesh {
 		// command.forEach((value, i) => {command[i] = parseFloat(value)});
 		let type = command[0];
 		let index = command[1];
-		let texture = P5TexturedMesh.textureIndexMap[index].pGraphic;
+		let texturedMesh = P5TexturedMesh.textureIndexMap[index];
+		let texture = texturedMesh.pGraphic;
 
 		switch (type) {
 			case "0":
@@ -103,10 +100,14 @@ export class P5TexturedMesh {
 				texture.line(px, py, x, y);
 				break;
 		}
+
+		texturedMesh.updateTexture();
 	}
 }
-let min = 1;
 P5TexturedMesh.prototype.updateTexture = function () {
+	this.mesh.material.diffuseTexture.update();
+}
+P5TexturedMesh.prototype.update = function () {
 	if (player.pickingInfo && player.pPickingInfo && player.pickingInfo.hit && player.pPickingInfo.hit &&
 		player.pickingInfo.pickedMesh.name === this.mesh.name && player.pPickingInfo.pickedMesh.name === this.mesh.name) {
 		if (mouseStatus.left) {
@@ -128,10 +129,9 @@ P5TexturedMesh.prototype.updateTexture = function () {
 				socket.emit("textureCommand", command);
 			}
 		}
-		if (mouseStatus.right) {
+		if (mouseStatus.right) { // temp
 			this.pGraphic.background(this.bgColor);
+			this.updateTexture();
 		}
 	}
-
-	this.mesh.material.diffuseTexture.update();
 }

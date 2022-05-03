@@ -1,11 +1,5 @@
-export function emptyfunction(){}
-export function translatePoint(absPointX, absPointY, centerX, centerY, theta) {
-    absPointX -= centerX;
-    absPointY -= centerY;
-    let c = Math.cos(theta);
-    let s = Math.sin(theta);
-    return [(absPointX * c) + (absPointY * s), (-absPointX * s) + (absPointY * c)];
-}
+import { emptyfunction, translatePoint } from "./util";
+import { socket } from "./networking";
 
 export class Button {
 	constructor(g, s, size = 20, f = emptyfunction, toggleable = false, x = 0, y = 0, t = -10) {
@@ -317,5 +311,216 @@ class Slider {
 		if (this.inside(this.mx, this.my) || this.on)
 			this.color_button = this.g.lerpColor(this.color_button, this.g.color(0, 0, 0), 0.1);
 		else this.color_button = this.g.lerpColor(this.color_button, this.g.color(255, 0, 69), 0.1);
+	}
+}
+
+export class Chatbox {
+	constructor(g, s, x, y, w = 500, h = 250) {
+		this.g = g;
+		this.position(x, y);
+		this.s = s;
+		this.w = w;
+		this.hmax = this.h = h;
+		this.hh = 45;
+		this.hcolor = this.g.color(21, 22, 27);
+		this.textsizetop = this.hh * 0.8;
+		this.theta = this.g.radians(-2.3);
+		this.bx = this.w - (this.hh * 3) / 4;
+		this.by = -this.hh / 2;
+		this.br = this.hh / 2;
+		this.bcolor = this.g.color(0, 0);
+		this.bd = this.br * 2;
+		this.mx = this.my = 0;
+		this.on = false;
+		this.melta = this.on ? 1 : 0;
+		this.textbox = this.g.createInput();
+		// this.textbox.attribute("onkeypress", "chatboxSend();");
+		this.textbox.attribute("maxlength", "100");
+		this.textbox.style("transform-origin", "0% 0%");
+		this.textbox.style("border", "none");
+		this.textbox.style("margin", "none");
+		this.textbox.style("outline", "none");
+		this.textbox.style("padding", "none");
+		this.textbox.style("color", this.g.color(10, 172, 197));
+		this.textbox.style("background-color", this.g.color(30, 32, 46));
+		this.textbox.style("font-size", "24px");
+		this.textbox.style("font-family", "Lucida Console");
+		this.textbox.size(this.w, this.hh);
+		this.textbox.style("z-index", "2");
+
+		this.messagebox = this.g.createElement("textarea");
+		this.messagebox.attribute("readonly", true);
+		this.messagebox.style("transform-origin", "0% 0%");
+		this.messagebox.style("resize", "none");
+		this.messagebox.style("border", "none");
+		this.messagebox.style("margin", "none");
+		this.messagebox.style("outline", "none");
+		this.messagebox.style("padding", "none");
+		this.messagebox.style("color", this.g.color(122, 162, 247));
+		this.messagebox.style("background-color", this.g.color(26, 27, 38));
+		this.messagebox.style("font-size", "20px");
+		this.messagebox.size(this.w, this.h - this.hh);
+		this.messagebox.style("z-index", "2");
+		// this.messagebox.hide();
+		// this.textbox.hide();
+		this.work_between();
+		this.notification_y = 0;
+		this.notification_messages = [];
+		this.notification_life = 0;
+		this.notification_goingup = false;
+		this.notification_count = 0;
+		this.unread_counter = 0; // for them
+	}
+	add_notification(s) {
+		if (!this.notification_messages.length) {
+			this.notification_life = 0;
+			this.notification_goingup = true;
+		}
+		this.notification_messages.push(s);
+	}
+	findmx() {
+		[this.mx, this.my] = translatePoint(
+			this.g.mouseX,
+			this.g.mouseY,
+			this.x,
+			this.y,
+			this.theta
+		);
+	}
+	position(x, y) {
+		this.x = x;
+		this.yy = this.y = y;
+	}
+	inside() {
+		return this.mx > 0 && this.mx < this.w && this.my < 0 && this.my > -this.h;
+	}
+	inside_button() {
+		if (
+			this.mx > this.bx - this.br &&
+			this.mx < this.bx + this.br &&
+			this.my > this.by - this.br &&
+			this.my < this.by + this.br
+		)
+			return this.g.dist(this.mx, this.my, this.bx, this.by) <= this.br;
+		return false;
+	}
+	display(onlineCount) {
+		this.g.push();
+		this.g.translate(this.x, this.y);
+		this.g.rotate(this.theta);
+
+		/// for background maybe
+		//     if (this.inside()) fill(255, 0, 200);
+		//     else
+		this.g.noStroke();
+		this.g.fill(25);
+		this.g.rect(0, -this.h, this.w, this.h);
+		this.g.rect(0, -this.h - this.hh - this.notification_y, this.w, this.hh);
+		this.g.fill(255, 0, 69);
+		this.g.textSize(15);
+		this.g.textAlign(this.g.LEFT, this.g.BASELINE);
+		this.g.text(onlineCount + " online", 0, -this.h - this.hh - this.notification_y);
+		this.g.textSize(20);
+		this.g.textAlign(this.g.LEFT, this.g.CENTER);
+		this.g.fill(200);
+		if (this.notification_messages.length)
+			this.g.text(this.notification_messages[0], 10, -this.h - this.hh - this.notification_y + this.hh / 2);
+		//  flash effect??
+		//     if( cos( frameCount/10 ) > 0 ) this.hcolor = lerpColor( this.hcolor , color(50, 0, 169) , 0.05 ) ;
+		//     else this.hcolor = lerpColor( this.hcolor , color(50, 0, 269) , 0.05 ) ;
+		this.g.fill(this.hcolor);
+		this.g.rect(0, -this.h - this.hh, this.w, this.hh);
+		this.g.textAlign(this.g.LEFT, this.g.BOTTOM);
+		this.g.textSize(this.textsizetop);
+		this.g.noStroke();
+		// fill (250 , 100* ( 1 + cos(frameCount/40) )/2 + 100)
+		this.g.fill(200);
+		this.g.text(this.s, 5, -this.h);
+		if (!this.on && this.unread_counter) {
+			this.g.fill(255, 0, 69);
+			this.g.circle(this.w, -this.h - this.hh, this.hh / 2);
+			this.g.fill(220);
+			this.g.textSize(this.textsizetop * 0.4);
+			this.g.textAlign(this.g.CENTER, this.g.CENTER);
+			this.g.text(this.unread_counter, this.w, -this.h - this.hh);
+		}
+		this.g.translate(this.bx, this.by);
+		this.bcolor = this.g.lerpColor(
+			this.bcolor,
+			this.inside_button() ? this.g.color(171, 29, 81) : this.g.color(44, 45, 56), 0.2);
+		this.g.fill(this.bcolor);
+		this.g.circle(0, 0, this.bd);
+
+		this.g.strokeWeight(4);
+		this.g.stroke(250); //stroke(this.inside_button() ?  0 : 250);
+		let u = this.br / 6;
+		let i = this.melta * 2 - 1; //map(this.h, 0, this.hmax, -1, 1);
+		this.g.line(-u * 2, -i * u, 0, i * u);
+		this.g.line(u * 2, -i * u, 0, i * u);
+		this.g.pop();
+	}
+	work_dom() {
+		this.textbox.position(
+			this.x + (this.h - this.messagebox.height * this.melta) * this.g.sin(this.theta),
+			this.y - (this.h - this.messagebox.height * this.melta) * this.g.cos(this.theta)
+		);
+		this.textbox.style(
+			"transform",
+			"rotate(" + this.theta + "rad) " + "scaleY(" + this.melta + ")"
+		);
+		this.messagebox.position(
+			this.x + this.h * this.g.sin(this.theta),
+			this.y - this.h * this.g.cos(this.theta)
+		);
+		this.messagebox.style(
+			"transform",
+			"rotate(" + this.theta + "rad) " + "scaleY(" + this.melta + ")"
+		);
+	}
+	work_between() {
+		this.work_dom();
+		// this.y = this.yy - this.h + this.hmax; // cool fly away effect
+		this.by = -this.h - this.hh / 2; //this.hmax ; // maybe make it like the X button?
+	}
+	work(onlineCount) {
+		this.notification_life++;
+		if (this.notification_life > 200) this.notification_goingup = false;
+		if (this.notification_goingup) {
+			this.notification_y = this.g.lerp(this.notification_y, this.hh * 1.3, 0.1);
+			// if(this.notification_y < this.hh*1.3 )  this.notification_y += 2 ;
+		} else {
+			if (this.notification_y < 1) {
+				this.notification_messages.splice(0, 1);
+				if (this.notification_messages.length) {
+					this.notification_goingup = true;
+					this.notification_life = 0;
+				}
+			}
+			this.notification_y = this.g.lerp(this.notification_y, 0, 0.1);
+		}
+
+		this.h = this.on ? this.g.lerp(this.h, this.hmax, 0.06) : this.g.lerp(this.h, 0, 0.08);
+		this.findmx();
+		this.melta = this.h / this.hmax;
+		if (this.melta > 0.0001 && this.melta < 0.9999) this.work_between();
+		this.display(onlineCount);
+	}
+	clicked() {
+		if (this.inside_button()) {
+			this.on = !this.on;
+			if (this.on) this.unread_counter = 0;
+		}
+	}
+	addChat(chat) {
+		this.messagebox.value(this.messagebox.value() + chat + "\n");
+		this.messagebox.elt.scrollTop = this.messagebox.elt.scrollHeight;
+	}
+	send(playerName){
+		if (this.textbox.value() !== "") {
+			let s = "< " + playerName + " >: " + this.textbox.value();
+			this.addChat(s);
+			socket.emit("chat", s);
+			this.textbox.value("");
+		}
 	}
 }

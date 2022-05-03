@@ -79,6 +79,11 @@ io.on("connection", (socket) => {
 			roomMap[socket.player.roomname].textureCommandBuffer += "\n" + command;
 		}
 	});
+	socket.on("chat", (chat) => {
+		if (socket.player) {
+			socket.to(socket.player.roomname).emit("chat", chat);
+		}
+	});
 
 	socket.on("requestEnemyInit", (sendEnemyData) => {
 		let enemySockets = getSocketsOf(socket.player.roomname);

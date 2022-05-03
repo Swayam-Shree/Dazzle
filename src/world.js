@@ -3,10 +3,11 @@ import { Player, Enemy } from "./player";
 import { loadMap } from "./map";
 import { hudInit, p5Hud } from "./hud";
 import { socket, username } from "./networking";
+import { coordsNearScreenCenter } from "./util";
 
 export let worldCanvas, engine, scene, keybinds, mouseStatus, directions,
-	player, worldMap, gravityAcceleration;
-	
+	player, worldMap, gravityAcceleration, frameCount;
+
 export let enemies = [];
 export let enemyIdMap = {};
 
@@ -34,7 +35,8 @@ export function worldInit() {
 		moveLeft: 65,
 		moveRight: 68,
 		jump: " ",
-		sprint: "Shift"
+		sprint: "Shift",
+		chatboxToggle: "v"
 	};
 
 	mouseStatus = {
@@ -69,11 +71,13 @@ export function worldInit() {
 		let enemy = new Enemy(scene, id, name);
 		enemies.push(enemy);
 		enemyIdMap[id] = enemy;
+		p5Hud.chatbox.add_notification(`${name} joined`);
 	});
 	socket.on("enemyLeft", (id) => {
 		let enemy = enemyIdMap[id];
 		enemy.mesh.dispose();
 		enemies.splice(enemies.indexOf(enemy), 1);
+		p5Hud.chatbox.add_notification(`${enemyIdMap[id].name} left`);
 		delete enemyIdMap[id];
 	});
 
@@ -82,10 +86,10 @@ export function worldInit() {
 	gravityAcceleration = new Vector3(0, -0.04, 0);
 
 	hudInit();
-	
+
 	scene.onBeforeRenderObservable.add(() => {
 		player.update();
-		worldMap.forEach(p5TeturedMesh => { p5TeturedMesh.updateTexture(); });
+		worldMap.forEach(texturedMesh => { texturedMesh.update(); });
 	});
 	engine.runRenderLoop(() => {
 		scene.render();
@@ -101,6 +105,13 @@ export function worldInit() {
 					case keybinds.sprint:
 						player.camera.speed = player.sprintSpeed;
 						break;
+					case keybinds.chatboxToggle:
+						if (engine.isPointerLock) {
+							p5Hud.chatbox.on = !p5Hud.chatbox.on;
+							if (p5Hud.chatbox.on) {
+								p5Hud.chatbox.unread_counter = 0;
+							}
+						}
 				}
 				break;
 			case KeyboardEventTypes.KEYUP:
@@ -119,10 +130,10 @@ export function worldInit() {
 	window.addEventListener("mousedown", (event) => {
 		if (event.button === 0) {
 			mouseStatus.left = true;
-			if ( event.pageX > window.innerWidth/4 && event.pageX < window.innerWidth * 3/4 &&
-				event.pageY > window.innerHeight/4 && event.pageY < window.innerHeight * 3/4 ) {
+			if (coordsNearScreenCenter(event.clientX, event.clientY)) {
 				engine.enterPointerlock();
 			}
+			p5Hud.chatbox.clicked();
 		}
 		if (event.button === 2) {
 			mouseStatus.right = true;
@@ -131,7 +142,9 @@ export function worldInit() {
 	window.addEventListener("mouseup", (event) => {
 		if (event.button === 0) {
 			mouseStatus.left = false;
-			worldCanvas.focus();
+			if (coordsNearScreenCenter(event.clientX, event.clientY)) {
+				worldCanvas.focus();
+			}
 		}
 		if (event.button === 2) {
 			mouseStatus.right = false;
